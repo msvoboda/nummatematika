@@ -1,0 +1,505 @@
+//---------------------------------------------------------------------------
+
+#include <vcl.h>
+#pragma hdrstop
+
+#include "difrov.h"
+#include "Unit1.h"
+#include <math.h>
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma link "LbSpeedButton"
+#pragma resource "*.dfm"
+TFormDR *FormDR;
+#define KROK 500
+//---------------------------------------------------------------------------
+__fastcall TFormDR::TFormDR(TComponent* Owner)
+  : TForm(Owner)
+{
+}
+//---------------------------------------------------------------------------
+
+
+TFormDR::zFunkce(double y0, double z0, double u, double T1, double T2, double K, double step)
+{
+  double vysledek;
+	double zvysledek;
+	double vysledekS;
+	double zvysledekS;
+	//FILE *fw;
+
+  /*
+	fw = fopen("zvysledky", "w");
+	if (fw == NULL) {
+		printf("\n CHYBA");
+		return;
+	} */
+  // spocitat y
+  Form1->Image1->Canvas->Pen->Color = Panel1->Color;
+	for (int i = 0; i < EditKROK->Text.ToInt(); i++) {
+		if (i == 0) {
+			vysledek = y0 + step*z0;
+			zvysledek = z0 + step*(1/(T2*T1))*(K*u-(T1+T2)*z0-y0);
+      Form1->Image1->Canvas->MoveTo(Form1->x_absolut(0), Form1->y_absolut(y0));
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(vysledek));
+		}
+		else {
+			vysledek = vysledekS + step*zvysledekS;
+			zvysledek = zvysledekS + step*(1/(T2*T1))*(K*u-(T1+T2)*zvysledekS-vysledekS);
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(vysledek));
+		}
+
+		//fprintf(fw, "\ny[%d]=%.2f", i, zvysledek);
+		//printf("\ny[%d]=%.2f", i, zvysledek);
+		vysledekS = vysledek;
+		zvysledekS = zvysledek;
+	}
+  Form1->Image1->Canvas->Pen->Color = Panel2->Color;
+  // spocitat z
+	for (int i = 0; i < EditKROK->Text.ToInt(); i++) {
+		if (i == 0) {
+			vysledek = y0 + step*z0;
+			zvysledek = z0 + step*(1/(T2*T1))*(K*u-(T1+T2)*z0-y0);
+      Form1->Image1->Canvas->MoveTo(Form1->x_absolut(0), Form1->y_absolut(y0));
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(zvysledek));
+		}
+		else {
+			vysledek = vysledekS + step*zvysledekS;
+			zvysledek = zvysledekS + step*(1/(T2*T1))*(K*u-(T1+T2)*zvysledekS-vysledekS);
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(zvysledek));
+		}
+
+		//fprintf(fw, "\ny[%d]=%.2f", i, zvysledek);
+		//printf("\ny[%d]=%.2f", i, zvysledek);
+		vysledekS = vysledek;
+		zvysledekS = zvysledek;
+	}
+
+
+	//fclose(fw);
+}
+void __fastcall TFormDR::LbSpeedButton1Click(TObject *Sender)
+{
+  zFunkce(EditY0->Text.ToDouble(), EditZ0->Text.ToDouble(), EditU->Text.ToDouble(), EditT1->Text.ToDouble(), EditT2->Text.ToDouble(), EditK->Text.ToDouble(), EditStep->Text.ToDouble());
+}
+//---------------------------------------------------------------------------
+void __fastcall TFormDR::Panel1Click(TObject *Sender)
+{
+if (ColorDialog1->Execute() == false)
+  return;
+
+Panel1->Color = ColorDialog1->Color;
+Panel1->Font->Color = 0xffffff-ColorDialog1->Color;
+}
+//---------------------------------------------------------------------------
+void __fastcall TFormDR::Panel2Click(TObject *Sender)
+{
+if (ColorDialog1->Execute() == false)
+  return;
+
+Panel2->Color = ColorDialog1->Color;
+Panel2->Font->Color = 0xffffff-ColorDialog1->Color;
+}
+//---------------------------------------------------------------------------
+
+void TFormDR::RK2Funkce(double y0, double z0, double u, double T1, double T2, double K, double step, double alfa)
+{
+  double yvysledek;
+	double zvysledek;
+	double g1y, g2y, g1z, g2z;
+
+  Form1->Image1->Canvas->Pen->Color = Panel1->Color;
+
+	for (int i = 0; i < EditKROK->Text.ToInt(); i++) {
+		if (i == 0) {
+			g1y = step*z0;
+			g1z = step/(T1*T2)*(K*u-(T1+T2)*z0-y0);
+			g2y = step*(z0+g1z/(2*alfa));
+			g2z = step/(T1*T2)*(K*u-(T1+T2)*(z0+g1z/(2*alfa))-(y0+g1y/(2*alfa)));
+
+			yvysledek = y0+(1-alfa)*g1y+alfa*g2y;
+			zvysledek = z0+(1-alfa)*g1z+alfa*g2z;
+      Form1->Image1->Canvas->MoveTo(Form1->x_absolut(0), Form1->y_absolut(y0));
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(yvysledek));
+		}
+		else {
+			g1y = step*zvysledek;
+			g1z = step/(T1*T2)*(K*u-(T1+T2)*zvysledek-yvysledek);
+			g2y = step*(zvysledek+g1z/(2*alfa));
+			g2z = step/(T1*T2)*(K*u-(T1+T2)*(zvysledek+g1z/(2*alfa))-(yvysledek+g1y/(2*alfa)));
+
+			yvysledek = yvysledek+(1-alfa)*g1y+alfa*g2y;
+			zvysledek = zvysledek+(1-alfa)*g1z+alfa*g2z;
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(yvysledek));
+		}
+  }
+  Form1->Image1->Canvas->Pen->Color = Panel2->Color;
+	for (int i = 0; i < EditKROK->Text.ToInt(); i++) {
+		if (i == 0) {
+			g1y = step*z0;
+			g1z = step/(T1*T2)*(K*u-(T1+T2)*z0-y0);
+			g2y = step*(z0+g1z/(2*alfa));
+			g2z = step/(T1*T2)*(K*u-(T1+T2)*(z0+g1z/(2*alfa))-(y0+g1y/(2*alfa)));
+
+			yvysledek = y0+(1-alfa)*g1y+alfa*g2y;
+			zvysledek = z0+(1-alfa)*g1z+alfa*g2z;
+      Form1->Image1->Canvas->MoveTo(Form1->x_absolut(0), Form1->y_absolut(y0));
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(zvysledek));
+		}
+		else {
+			g1y = step*zvysledek;
+			g1z = step/(T1*T2)*(K*u-(T1+T2)*zvysledek-yvysledek);
+			g2y = step*(zvysledek+g1z/(2*alfa));
+			g2z = step/(T1*T2)*(K*u-(T1+T2)*(zvysledek+g1z/(2*alfa))-(yvysledek+g1y/(2*alfa)));
+
+			yvysledek = yvysledek+(1-alfa)*g1y+alfa*g2y;
+			zvysledek = zvysledek+(1-alfa)*g1z+alfa*g2z;
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(zvysledek));
+		}
+
+	}
+}
+void __fastcall TFormDR::LbSpeedButton3Click(TObject *Sender)
+{
+ RK2Funkce(EditY0->Text.ToDouble(), EditZ0->Text.ToDouble(), EditU->Text.ToDouble(), EditT1->Text.ToDouble(), EditT2->Text.ToDouble(), EditK->Text.ToDouble(), EditStep->Text.ToDouble(), EditAlfa->Text.ToDouble());
+}
+//---------------------------------------------------------------------------
+
+
+void TFormDR::RK4Funkce(double y0, double z0, double u, double T1, double T2, double K, double step)
+{
+  double yvysledek;
+	double zvysledek;
+	double g1y, g2y, g3y, g4y, g1z, g2z, g3z, g4z;
+
+  Form1->Image1->Canvas->Pen->Color = Panel1->Color;
+	for (int i = 0; i < EditKROK->Text.ToInt(); i++) {
+		if (i == 0) {
+			g1y = step*z0;
+			g1z = step/(T1*T2)*(K*u-(T1+T2)*z0-y0);
+			g2y = step*(z0+g1z/2);
+			g2z = step/(T1*T2)*(K*u-(T1+T2)*(z0+g1z/2)-(y0+g1y/2));
+      g3y = step*(z0+g2z/2);
+			g3z = step/(T1*T2)*(K*u-(T1+T2)*(z0+g2z/2)-(y0+g2y/2));
+      g4y = step*(z0+g3z);
+			g4z = step/(T1*T2)*(K*u-(T1+T2)*(z0+g3z)-(y0+g3y));
+
+			yvysledek = y0+(g1y+2*g2y+2*g3y+g4y)/6;
+			zvysledek = z0+(g1z+2*g2z+2*g3z+g4z)/6;
+      Form1->Image1->Canvas->MoveTo(Form1->x_absolut(0), Form1->y_absolut(y0));
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(yvysledek));
+		}
+		else {
+			g1y = step*zvysledek;
+			g1z = step/(T1*T2)*(K*u-(T1+T2)*zvysledek-yvysledek);
+			g2y = step*(zvysledek+g1z/2);
+			g2z = step/(T1*T2)*(K*u-(T1+T2)*(zvysledek+g1z/2)-(yvysledek+g1y/2));
+ 			g3y = step*(zvysledek+g2z/2);
+			g3z = step/(T1*T2)*(K*u-(T1+T2)*(zvysledek+g2z/2)-(yvysledek+g2y/2));
+			g4y = step*(zvysledek+g3z);
+			g4z = step/(T1*T2)*(K*u-(T1+T2)*(zvysledek+g3z)-(yvysledek+g3y));
+
+			yvysledek = yvysledek+(g1y+2*g2y+2*g3y+g4y)/6;
+			zvysledek = zvysledek+(g1z+2*g2z+2*g3z+g4z)/6;
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(yvysledek));
+		}
+  }
+
+   Form1->Image1->Canvas->Pen->Color = Panel2->Color;
+   for (int i = 0; i < EditKROK->Text.ToInt(); i++) {
+		if (i == 0) {
+			g1y = step*z0;
+			g1z = step/(T1*T2)*(K*u-(T1+T2)*z0-y0);
+			g2y = step*(z0+g1z/2);
+			g2z = step/(T1*T2)*(K*u-(T1+T2)*(z0+g1z/2)-(y0+g1y/2));
+      g3y = step*(z0+g2z/2);
+			g3z = step/(T1*T2)*(K*u-(T1+T2)*(z0+g2z/2)-(y0+g2y/2));
+      g4y = step*(z0+g3z);
+			g4z = step/(T1*T2)*(K*u-(T1+T2)*(z0+g3z)-(y0+g3y));
+
+			yvysledek = y0+(g1y+2*g2y+2*g3y+g4y)/6;
+			zvysledek = z0+(g1z+2*g2z+2*g3z+g4z)/6;
+      Form1->Image1->Canvas->MoveTo(Form1->x_absolut(0), Form1->y_absolut(y0));
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(zvysledek));
+		}
+		else {
+			g1y = step*zvysledek;
+			g1z = step/(T1*T2)*(K*u-(T1+T2)*zvysledek-yvysledek);
+			g2y = step*(zvysledek+g1z/2);
+			g2z = step/(T1*T2)*(K*u-(T1+T2)*(zvysledek+g1z/2)-(yvysledek+g1y/2));
+ 			g3y = step*(zvysledek+g2z/2);
+			g3z = step/(T1*T2)*(K*u-(T1+T2)*(zvysledek+g2z/2)-(yvysledek+g2y/2));
+			g4y = step*(zvysledek+g3z);
+			g4z = step/(T1*T2)*(K*u-(T1+T2)*(zvysledek+g3z)-(yvysledek+g3y));
+
+			yvysledek = yvysledek+(g1y+2*g2y+2*g3y+g4y)/6;
+			zvysledek = zvysledek+(g1z+2*g2z+2*g3z+g4z)/6;
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(zvysledek));
+		}
+  }
+}
+void __fastcall TFormDR::LbSpeedButton4Click(TObject *Sender)
+{
+ RK4Funkce(EditY0->Text.ToDouble(), EditZ0->Text.ToDouble(), EditU->Text.ToDouble(), EditT1->Text.ToDouble(), EditT2->Text.ToDouble(), EditK->Text.ToDouble(), EditStep->Text.ToDouble());
+}
+//---------------------------------------------------------------------------
+
+
+void TFormDR::Heunova(double y0, double z0, double u, double T1, double T2, double K, double step)
+{
+  double yvysledek;
+	double zvysledek;
+	double g1y, g2y, g3y, g1z, g2z, g3z;
+
+  Form1->Image1->Canvas->Pen->Color = Panel1->Color;
+	for (int i = 0; i < EditKROK->Text.ToInt(); i++) {
+		if (i == 0) {
+			g1y = step*z0;
+			g1z = step/(T1*T2)*(K*u-(T1+T2)*z0-y0);
+			g2y = step*(z0+g1z/3);
+			g2z = step/(T1*T2)*(K*u-(T1+T2)*(z0+g1z/3)-(y0+g1y/3));
+      g3y = step*(z0+2*g2z/3);
+			g3z = step/(T1*T2)*(K*u-(T1+T2)*(z0+2*g2z/3)-(y0+2*g2y/3));
+
+			yvysledek = y0+0.25*g1y+2*0.75*g3y;
+			zvysledek = z0+0.25*g1z+2*0.75*g3z;
+      Form1->Image1->Canvas->MoveTo(Form1->x_absolut(0), Form1->y_absolut(y0));
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(yvysledek));
+		}
+		else {
+			g1y = step*zvysledek;
+			g1z = step/(T1*T2)*(K*u-(T1+T2)*zvysledek-yvysledek);
+			g2y = step*(zvysledek+g1z/3);
+			g2z = step/(T1*T2)*(K*u-(T1+T2)*(zvysledek+g1z/3)-(yvysledek+g1y/3));
+ 			g3y = step*(zvysledek+2*g2z/3);
+			g3z = step/(T1*T2)*(K*u-(T1+T2)*(zvysledek+2*g2z/3)-(yvysledek+2*g2y/3));
+
+			yvysledek = yvysledek+0.25*g1y+2*0.75*g3y;
+			zvysledek = zvysledek+0.25*g1z+2*0.75*g3z;
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(yvysledek));
+		}
+  }
+
+  Form1->Image1->Canvas->Pen->Color = Panel2->Color;
+	for (int i = 0; i < EditKROK->Text.ToInt(); i++) {
+		if (i == 0) {
+			g1y = step*z0;
+			g1z = step/(T1*T2)*(K*u-(T1+T2)*z0-y0);
+			g2y = step*(z0+g1z/3);
+			g2z = step/(T1*T2)*(K*u-(T1+T2)*(z0+g1z/3)-(y0+g1y/3));
+      g3y = step*(z0+2*g2z/3);
+			g3z = step/(T1*T2)*(K*u-(T1+T2)*(z0+2*g2z/3)-(y0+2*g2y/3));
+
+			yvysledek = y0+0.25*g1y+2*0.75*g3y;
+			zvysledek = z0+0.25*g1z+2*0.75*g3z;
+      Form1->Image1->Canvas->MoveTo(Form1->x_absolut(0), Form1->y_absolut(y0));
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(zvysledek));
+		}
+		else {
+			g1y = step*zvysledek;
+			g1z = step/(T1*T2)*(K*u-(T1+T2)*zvysledek-yvysledek);
+			g2y = step*(zvysledek+g1z/3);
+			g2z = step/(T1*T2)*(K*u-(T1+T2)*(zvysledek+g1z/3)-(yvysledek+g1y/3));
+ 			g3y = step*(zvysledek+2*g2z/3);
+			g3z = step/(T1*T2)*(K*u-(T1+T2)*(zvysledek+2*g2z/3)-(yvysledek+2*g2y/3));
+
+			yvysledek = yvysledek+0.25*g1y+2*0.75*g3y;
+			zvysledek = zvysledek+0.25*g1z+2*0.75*g3z;
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(zvysledek));
+		}
+  }
+}
+void __fastcall TFormDR::LbSpeedButton5Click(TObject *Sender)
+{
+Heunova(EditY0->Text.ToDouble(), EditZ0->Text.ToDouble(), EditU->Text.ToDouble(), EditT1->Text.ToDouble(), EditT2->Text.ToDouble(), EditK->Text.ToDouble(), EditStep->Text.ToDouble());
+}
+//---------------------------------------------------------------------------
+void TFormDR::Nystrom(double y0, double z0, double u, double T1, double T2, double K, double step)
+{
+  double vysledek;
+	double zvysledek;
+	double vysledekS = 0;
+	double zvysledekS = 0;
+ 	double vysledekS1=0;
+	double zvysledekS1=0;
+	//FILE *fw;
+
+  /*
+	fw = fopen("zvysledky", "w");
+	if (fw == NULL) {
+		printf("\n CHYBA");
+		return;
+	} */
+  // spocitat y
+  Form1->Image1->Canvas->Pen->Color = Panel1->Color;
+	for (int i = 0; i < EditKROK->Text.ToInt(); i++) {
+		if (i == 0) {
+			vysledek = y0 + 2*step*z0;
+			zvysledek = z0 + 2*step*(1/(T2*T1))*(K*u-(T1+T2)*z0-y0);
+      Form1->Image1->Canvas->MoveTo(Form1->x_absolut(0), Form1->y_absolut(y0));
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(vysledek));
+		}
+		else {
+			vysledek = vysledekS1 + 2*step*zvysledekS1;
+			zvysledek = zvysledekS1 + 2*step*(1/(T2*T1))*(K*u-(T1+T2)*zvysledekS1-vysledekS1);
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(vysledek));
+		}
+
+		//fprintf(fw, "\ny[%d]=%.2f", i, zvysledek);
+		//printf("\ny[%d]=%.2f", i, zvysledek);
+    vysledekS1 = vysledekS;
+		zvysledekS1 = zvysledekS;
+		vysledekS = vysledek;
+		zvysledekS = zvysledek;
+	}
+
+  Form1->Image1->Canvas->Pen->Color = Panel2->Color;
+ 	vysledekS = 0;
+	zvysledekS = 0;
+  // spocitat z
+	for (int i = 2; i < EditKROK->Text.ToInt(); i++) {
+		if (i == 2) {
+			vysledek = y0 + 2*step*z0;
+			zvysledek = z0 + 2*step*(1/(T2*T1))*(K*u-(T1+T2)*z0-y0);
+      Form1->Image1->Canvas->MoveTo(Form1->x_absolut(0), Form1->y_absolut(y0));
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(zvysledek));
+		}
+		else {
+			vysledek = vysledekS1 + 2*step*zvysledekS1;
+			zvysledek = zvysledekS1 + 2*step*(1/(T2*T1))*(K*u-(T1+T2)*zvysledekS1-vysledekS1);
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*step), Form1->y_absolut(zvysledek));
+		}
+
+		//fprintf(fw, "\ny[%d]=%.2f", i, zvysledek);
+		//printf("\ny[%d]=%.2f", i, zvysledek);
+    vysledekS1 = vysledekS;
+		zvysledekS1 = zvysledekS;
+		vysledekS = vysledek;
+		zvysledekS = zvysledek;
+	}
+
+
+	//fclose(fw);
+}
+void __fastcall TFormDR::LbSpeedButton2Click(TObject *Sender)
+{
+  Nystrom(EditY0->Text.ToDouble(), EditZ0->Text.ToDouble(), EditU->Text.ToDouble(), EditT1->Text.ToDouble(), EditT2->Text.ToDouble(), EditK->Text.ToDouble(), EditStep->Text.ToDouble());
+}
+//---------------------------------------------------------------------------
+
+
+void TFormDR::PredKor(double y0, double z0, double u, double T1, double T2, double K, double h, double alfa)
+{
+  double prediktor;
+	double korektor;
+	double Yvysledek, Zvysledek;
+	double yprediktor, zprediktor, ykorektor, zkorektor, ykorektors, zkorektors;
+	double g1y, g1z, g2y, g2z;
+	double epsilon = 0.01;
+
+	//FILE *fv;
+
+  /*
+	fv = fopen("PredKorvysledek" , "w");
+	if (fv == NULL) {
+		printf("\n CHYBA");
+		return;
+	} */
+  Form1->Image1->Canvas->Pen->Color = Panel1->Color;
+	for (int i = 0; i < EditKROK->Text.ToInt(); i++) {
+		if (i == 0) {
+			g1y = h*z0;
+			g1z = (h/(T1*T2))*((K*u)-((T1+T2)*z0)-y0);
+			g2y = h*(z0+(g1z/(2*alfa)));
+			g2z = (h/(T1*T2))*((K*u)-((T1+T2)*(z0+(g1z/(2*alfa)))))-(y0+(g1y/(2*alfa)));
+
+			Yvysledek = y0+((1-alfa)*g1y)+(alfa*g2y);
+			Zvysledek = z0+((1-alfa)*g1z)+(alfa*g2z);
+      Form1->Image1->Canvas->MoveTo(Form1->x_absolut(0), Form1->y_absolut(y0));
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*h), Form1->y_absolut(Yvysledek));
+		}
+
+		else {
+			for (int i = 0; i < EditKROK->Text.ToInt(); i++){
+				yprediktor = Yvysledek + (h/2)*(3*Zvysledek - z0);
+				zprediktor = Zvysledek + (h/2)*((3/(T1*T2))*(K*u - (T1+T2)*Zvysledek - Yvysledek) - (1/T1*T2)*(K*u -(T1+T2)*z0 - y0));
+
+				while (1) {
+					ykorektor = Yvysledek + (h/2)*(Zvysledek + zprediktor);
+					zkorektor = Zvysledek + (h/2)*((1/(T1*T2)*(K*u-(T1+T2)*Zvysledek - Yvysledek) + (1/(T1*T2))*(K*u - (T1+T2)*zprediktor - yprediktor)));
+
+					if (fabs(ykorektor - ykorektors) <= epsilon) {
+						Yvysledek = ykorektor; Zvysledek = zkorektor;
+						break;
+					}
+					zkorektors = zkorektor;
+					ykorektors = ykorektor;
+				}
+
+        if (fabs(ykorektor - ykorektors) <= epsilon) {
+					Yvysledek = ykorektor; Zvysledek = zkorektor;
+					break;
+				}
+			}
+
+		}
+
+
+    Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*h), Form1->y_absolut(Yvysledek));
+		//fprintf(fv, "\nz[%d]=%.4f , y[%d]=%.4f", i, Zvysledek, i, Yvysledek);
+		//printf("\nz[%d]=%.4f, y[%d]=%.4f",i, Zvysledek, i, Yvysledek);
+	}
+	//fclose(fv);
+  Form1->Image1->Canvas->Pen->Color = Panel2->Color;
+  	for (int i = 0; i < EditKROK->Text.ToInt(); i++) {
+		if (i == 0) {
+			g1y = h*z0;
+			g1z = (h/(T1*T2))*((K*u)-((T1+T2)*z0)-y0);
+			g2y = h*(z0+(g1z/(2*alfa)));
+			g2z = (h/(T1*T2))*((K*u)-((T1+T2)*(z0+(g1z/(2*alfa)))))-(y0+(g1y/(2*alfa)));
+
+			Yvysledek = y0+((1-alfa)*g1y)+(alfa*g2y);
+			Zvysledek = z0+((1-alfa)*g1z)+(alfa*g2z);
+      Form1->Image1->Canvas->MoveTo(Form1->x_absolut(0), Form1->y_absolut(y0));
+      Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*h), Form1->y_absolut(Zvysledek));
+		}
+
+		else {
+			for (int i = 0; i < EditKROK->Text.ToInt(); i++){
+				yprediktor = Yvysledek + (h/2)*(3*Zvysledek - z0);
+				zprediktor = Zvysledek + (h/2)*((3/(T1*T2))*(K*u - (T1+T2)*Zvysledek - Yvysledek) - (1/T1*T2)*(K*u -(T1+T2)*z0 - y0));
+
+				while (1) {
+					ykorektor = Yvysledek + (h/2)*(Zvysledek + zprediktor);
+					zkorektor = Zvysledek + (h/2)*((1/(T1*T2)*(K*u-(T1+T2)*Zvysledek - Yvysledek) + (1/(T1*T2))*(K*u - (T1+T2)*zprediktor - yprediktor)));
+
+					if (fabs(ykorektor - ykorektors) <= epsilon) {
+						Yvysledek = ykorektor; Zvysledek = zkorektor;
+						break;
+					}
+					zkorektors = zkorektor;
+					ykorektors = ykorektor;
+				}
+
+        if (fabs(ykorektor - ykorektors) <= epsilon) {
+					Yvysledek = ykorektor; Zvysledek = zkorektor;
+					break;
+				}
+			}
+
+		}
+
+
+    Form1->Image1->Canvas->LineTo(Form1->x_absolut(i*h), Form1->y_absolut(Zvysledek));
+		//fprintf(fv, "\nz[%d]=%.4f , y[%d]=%.4f", i, Zvysledek, i, Yvysledek);
+		//printf("\nz[%d]=%.4f, y[%d]=%.4f",i, Zvysledek, i, Yvysledek);
+	}
+
+
+}
+void __fastcall TFormDR::LbSpeedButton6Click(TObject *Sender)
+{
+PredKor(EditY0->Text.ToDouble(), EditZ0->Text.ToDouble(), EditU->Text.ToDouble(), EditT1->Text.ToDouble(), EditT2->Text.ToDouble(), EditK->Text.ToDouble(), EditStep->Text.ToDouble(), EditAlfa->Text.ToDouble());
+}
+//---------------------------------------------------------------------------
+

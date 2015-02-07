@@ -1,0 +1,61 @@
+//---------------------------------------------------------------------------
+
+#include <vcl.h>
+#pragma hdrstop
+
+#include "Namereno.h"
+#include <stdio.h>
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma link "LbSpeedButton"
+#pragma resource "*.dfm"
+TFormData *FormData;
+
+
+//---------------------------------------------------------------------------
+__fastcall TFormData::TFormData(TComponent* Owner)
+  : TForm(Owner)
+{
+}
+//---------------------------------------------------------------------------
+void __fastcall TFormData::LbSpeedButton2Click(TObject *Sender)
+{
+StringGrid1->RowCount = EditCount->Text.ToInt();
+
+
+}
+//---------------------------------------------------------------------------
+
+
+void __fastcall TFormData::FormClose(TObject *Sender, TCloseAction &Action)
+{
+//Excel.OleFunction ("Quit");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TFormData::LbSpeedButton3Click(TObject *Sender)
+{
+if (OpenDialog1->Execute() == false)
+  return;
+
+FILE *fr;
+int result;
+float x, y;
+
+fr = fopen(OpenDialog1->FileName.c_str(), "r");
+if (fr == NULL) {
+  Application->MessageBox("Soubor se nepodarilo otevrit?", "Chyba", MB_OK);
+  return;
+}
+
+int counter = 0;
+while (fscanf(fr, "%f;%f", &x, &y) != EOF) {
+  StringGrid1-> Cells[0][counter] = x;
+  StringGrid1-> Cells[1][counter] = y;
+  counter++;
+  StringGrid1->RowCount = counter;
+}
+
+}
+//---------------------------------------------------------------------------
+
